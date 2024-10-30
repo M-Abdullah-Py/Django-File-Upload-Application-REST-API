@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet">
+    <link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css" rel="stylesheet">
+    
+    <style>
+        body {
+            max-width: 28em;
+            margin: 0 auto;
+            background-color: #03a9f4;
+            padding: 3vh 0;
+        }
+
+        .background {
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .clipboard {
+            border: 0;
+            padding: 15px;
+            border-radius: 3px;
+            background-image: linear-gradient(135deg, #FDEB71 10%, #F8D800 100%);
+            cursor: pointer;
+            color: #04048c;
+            font-family: "Karla", sans-serif;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .clipboard:hover {
+            background-color: #f8d800;
+            color: #ffffff;
+        }
+
+        p {
+            font-weight: 700;
+        }
+
+        .img-fluid {
+            height: 200px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="text-center">
+        <img src="/static/images/undraw.svg" class="img-fluid img-responsive" alt="File Upload">
+    </div>
+
+    <input type="file" class="my-pond mt-4" multiple name="filepond" />
+
+    <div class="text-center">
+        <button class="btn btn-success mt-4" onclick="upload_file()">Upload File</button>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="background">
+                <button onclick="copyClip()" class="clipboard">Click me to copy current URL</button>
+                <p id="copyMessage">Have you already clicked?</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/filepond/4.30.3/filepond.min.js"
+        integrity="sha512-AuMJiyTn/5k+gog21BWPrcoAC+CgOoobePSRqwsOyCSPo3Zj64eHyOsqDev8Yn9H45WUJmzbe9RaLTdFKkO0KQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.js"></script>
+    <script>
+        FilePond.registerPlugin(FilePondPluginImagePreview);
+        const pond = FilePond.create(document.querySelector('.my-pond'));
+        pond.setOptions({
+            allowMultiple: true,
+        });
+
+        let url = null;
+
+        function upload_file() {
+            const files = pond.getFiles();
+            const formdata = new FormData();
+
+            for (let i = 0; i < files.length; i++) {
+                formdata.append('files', files[i].file);
+            }
+
+            fetch('/handle/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': "{{ csrf_token }}",
+                },
+                body: formdata
+            })
+            .then(res => res.json())
+            .then(result => {
+                console.log("Full response:", result);
+                if (result.folder) {
+                    url = `http://127.0.0.1:8000/handle/download/${result.folder}`;
+                    document.getElementById("copyMessage").innerText = "URL set: " + url;
+                } else {
+                    alert("Upload failed, please try again.");
+                }
+            })
+            .catch(err => console.error("Error uploading file:", err));
+        }
+
+        function copyClip() {
+            if (url) {
+                navigator.clipboard.writeText(url);
+                alert("Copied the text: " + url);
+            } else {
+                alert("No URL to copy! Upload a file first.");
+            }
+        }
+    </script>
+</body>
+
+</html>
